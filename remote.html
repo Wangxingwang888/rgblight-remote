@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f1a">
+<title>RGBCW Remote</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.esm.js" type="module"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#0f0f1a;color:#fff;min-height:100vh;padding-bottom:160px;overflow-x:hidden}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 5px}
+.top-bar h1{font-size:20px;font-weight:600}
+.top-bar .mqtt-status{font-size:12px;padding:4px 10px;border-radius:12px;background:#252538;color:#888}
+.top-bar .mqtt-status.on{background:#0d2;color:#fff}
+.device-add{display:flex;gap:10px;padding:10px 20px}
+.device-add input{flex:1;padding:12px;border:none;border-radius:10px;background:#252538;color:#fff;font-size:15px;outline:none}
+.device-add input::placeholder{color:#666}
+.device-add button{padding:12px 18px;border:none;border-radius:10px;background:#4a9eff;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.device-list{padding:10px 20px}
+.device-card{background:#1a1a2e;border-radius:16px;padding:15px;margin-bottom:12px;border:2px solid transparent;transition:all .2s}
+.device-card.active{border-color:#4a9eff}
+.device-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.device-name{font-size:16px;font-weight:600}
+.device-id{font-size:11px;color:#666;font-family:monospace}
+.device-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.switch-track{width:50px;height:28px;border-radius:14px;background:#444;position:relative;cursor:pointer;transition:all .3s}
+.switch-track.on{background:#4a9eff}
+.switch-thumb{width:24px;height:24px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:all .3s}
+.switch-track.on .switch-thumb{left:24px}
+.slider-section{margin-bottom:12px}
+.slider-label{display:flex;justify-content:space-between;font-size:13px;color:#ccc;margin-bottom:6px}
+.slider-bar{width:100%;height:40px;border-radius:10px;position:relative;cursor:pointer;overflow:hidden;box-shadow:inset 0 2px 8px rgba(0,0,0,.4)}
+.slider-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid rgba(255,255,255,.9);position:absolute;top:6px;box-shadow:0 2px 8px rgba(0,0,0,.5);pointer-events:none;transform:translateX(-50%);transition:left .1s}
+.temp-bar{background:linear-gradient(90deg,#f80 0%,#fc6 25%,#fff 50%,#8bf 75%,#46a 100%)}
+.rgb-bri-bar{background:linear-gradient(90deg,#1a1a2e 0%,#555 30%,#aaa 60%,#fff 100%)}
+.cw-bri-bar{background:linear-gradient(90deg,#1a1a2e 0%,#f80 30%,#fff 60%,#8bf 100%)}
+.color-wheel-wrap{position:relative;width:min(85vw,360px);height:min(85vw,360px);margin:0 auto 15px}
+.color-wheel{width:100%;height:100%;border-radius:50%;background:conic-gradient(from 90deg,#f00,#f80,#ff0,#8f0,#0f0,#0f8,#0ff,#08f,#00f,#80f,#f0f,#f08,#f00);position:relative;box-shadow:0 0 40px rgba(0,0,0,.5)}
+.color-picker-dot{position:absolute;width:20px;height:20px;border-radius:50%;border:3px solid #fff;background:transparent;box-shadow:0 0 8px rgba(0,0,0,.5);pointer-events:none;transform:translate(-50%,-50%);z-index:10}
+.effect-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.effect-btn{padding:10px;border:none;border-radius:10px;background:#252538;color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.effect-btn.active{background:#f66}
+.group-section{padding:15px 20px;border-top:1px solid #252538;margin-top:10px}
+.group-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.group-header h2{font-size:16px}
+.group-add-btn{width:32px;height:32px;border-radius:50%;background:#4a9eff;color:#fff;border:none;font-size:18px;cursor:pointer}
+.group-card{background:#1a1a2e;border-radius:14px;padding:12px;margin-bottom:10px}
+.group-name{font-size:14px;font-weight:600;margin-bottom:8px}
+.group-devices{font-size:11px;color:#888;margin-bottom:8px}
+.group-ctrl{display:flex;gap:8px}
+.group-btn{flex:1;padding:8px;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;color:#fff}
+.group-btn.on{background:#0d2}
+.group-btn.off{background:#f47}
+.empty-state{text-align:center;padding:30px 20px;color:#666}
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:200}
+.modal.active{display:flex}
+.modal-box{background:#1a1a2e;border-radius:16px;padding:25px;width:90%;max-width:360px}
+.modal-title{font-size:18px;font-weight:600;margin-bottom:15px}
+.modal-input{width:100%;padding:12px;border:none;border-radius:10px;background:#252538;color:#fff;font-size:15px;margin-bottom:15px;outline:none}
+.modal-btns{display:flex;gap:10px}
+.modal-btns button{flex:1;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-cancel{background:#252538;color:#fff}
+.btn-confirm{background:#4a9eff;color:#fff}
+.remove-btn{font-size:11px;color:#f47;background:none;border:none;cursor:pointer;margin-left:8px}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <h1>RGBCW Remote</h1>
+  <div class="mqtt-status" id="mqttStatus">Offline</div>
+</div>
+<div class="device-add">
+  <input type="text" id="deviceInput" placeholder="Device ID (e.g. RGBL_A1B2C3)">
+  <button onclick="addDevice()">Add</button>
+</div>
+<div class="device-list" id="deviceList"></div>
+
+<div class="group-section">
+  <div class="group-header">
+    <h2>Groups</h2>
+    <button class="group-add-btn" onclick="showGroupModal()">+</button>
+  </div>
+  <div id="groupList"></div>
+</div>
+
+<div class="modal" id="groupModal" onclick="if(event.target===this)hideGroupModal()">
+  <div class="modal-box">
+    <div class="modal-title">New Group</div>
+    <input type="text" class="modal-input" id="groupNameInput" placeholder="Group name">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="hideGroupModal()">Cancel</button>
+      <button class="btn-confirm" onclick="createGroup()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import mqtt from 'https://unpkg.com/mqtt/dist/mqtt.esm.js';
+
+const BROKER = 'wss://broker.emqx.io:8084/mqtt';
+let client = null;
+let devices = JSON.parse(localStorage.getItem('rgblight_devices') || '[]');
+let groups = JSON.parse(localStorage.getItem('rgblight_groups') || '[]');
+let deviceStates = {};
+
+function saveDevices(){localStorage.setItem('rgblight_devices', JSON.stringify(devices));}
+function saveGroups(){localStorage.setItem('rgblight_groups', JSON.stringify(groups));}
+
+async function initMQTT(){
+  try{
+    client = mqtt.connect(BROKER, {clientId: 'remote_' + Math.random().toString(36).substr(2, 8), reconnectPeriod: 5000});
+    client.on('connect', () => {
+      document.getElementById('mqttStatus').textContent = 'Online';
+      document.getElementById('mqttStatus').classList.add('on');
+      devices.forEach(id => {
+        client.subscribe('rgblight/' + id + '/state');
+        client.subscribe('rgblight/' + id + '/online');
+      });
+      groups.forEach(g => client.subscribe('rgblight/groups/' + g.id + '/ctrl'));
+    });
+    client.on('message', (topic, payload) => {
+      const msg = payload.toString();
+      const m = topic.match(/rgblight\/(RGBL_[A-F0-9]+)\/state/);
+      if(m){ try{ deviceStates[m[1]] = JSON.parse(msg); render(); }catch(e){} }
+    });
+    client.on('offline', () => {
+      document.getElementById('mqttStatus').textContent = 'Offline';
+      document.getElementById('mqttStatus').classList.remove('on');
+    });
+  }catch(e){ console.error(e); }
+}
+
+function publish(deviceId, data){
+  if(client && client.connected){
+    client.publish('rgblight/' + deviceId + '/ctrl', JSON.stringify(data));
+  }
+}
+function publishGroup(groupId, data){
+  if(client && client.connected){
+    client.publish('rgblight/groups/' + groupId + '/ctrl', JSON.stringify(data));
+  }
+}
+
+window.addDevice = function(){
+  const id = document.getElementById('deviceInput').value.trim();
+  if(!id || !id.startsWith('RGBL_')){ alert('Enter valid Device ID'); return; }
+  if(!devices.includes(id)){ devices.push(id); saveDevices(); render(); if(client && client.connected) client.subscribe('rgblight/' + id + '/state'); }
+  document.getElementById('deviceInput').value = '';
+};
+window.removeDevice = function(id){
+  devices = devices.filter(d => d !== id);
+  delete deviceStates[id];
+  saveDevices(); render();
+};
+window.togglePower = function(id){
+  const s = deviceStates[id] || {};
+  const val = !s.power;
+  publish(id, {action:'power', value: val});
+  if(s) s.power = val;
+  render();
+};
+window.sendColor = function(id, r, g, b){
+  const s = deviceStates[id] || {};
+  publish(id, {action:'color', r, g, b, cw: s.cw||0, ww: s.ww||0, rgb_brightness: s.rgb_brightness||100, cw_brightness: s.cw_brightness||100});
+};
+window.sendRgbBri = function(id, val){
+  publish(id, {action:'rgb_brightness', value: parseInt(val)});
+};
+window.sendCwBri = function(id, val){
+  publish(id, {action:'cw_brightness', value: parseInt(val)});
+};
+window.sendTemp = function(id, pct){
+  const s = deviceStates[id] || {};
+  const cw = Math.round(pct * 255);
+  const ww = Math.round((1-pct) * 255);
+  publish(id, {action:'color', r: s.r||0, g: s.g||0, b: s.b||0, cw, ww, rgb_brightness: s.rgb_brightness||100, cw_brightness: s.cw_brightness||100});
+};
+window.sendEffect = function(id, effect){
+  publish(id, {action:'effect', effect, speed: 50});
+};
+window.ctrlGroup = function(gid, on){
+  publishGroup(gid, {action:'power', value: on});
+};
+window.deleteGroup = function(gid){
+  groups = groups.filter(g => g.id !== gid); saveGroups(); render();
+};
+window.showGroupModal = function(){ document.getElementById('groupModal').classList.add('active'); };
+window.hideGroupModal = function(){ document.getElementById('groupModal').classList.remove('active'); };
+window.createGroup = function(){
+  const name = document.getElementById('groupNameInput').value.trim();
+  if(!name){ alert('Enter name'); return; }
+  const gid = 'g_' + Date.now();
+  groups.push({id: gid, name, devices: [...devices]});
+  saveGroups(); hideGroupModal(); render();
+  if(client && client.connected) client.subscribe('rgblight/groups/' + gid + '/ctrl');
+};
+
+function render(){
+  const list = document.getElementById('deviceList');
+  if(devices.length === 0){ list.innerHTML = '<div class="empty-state">No devices. Add one above.</div>'; }
+  else {
+    list.innerHTML = devices.map(id => {
+      const s = deviceStates[id] || {power:false, r:0,g:0,b:0, cw:0,ww:0, rgb_brightness:100, cw_brightness:100, effect:''};
+      const on = s.power ? 'on' : 'off';
+      const rgbPct = (s.rgb_brightness || 100);
+      const cwPct = (s.cw_brightness || 100);
+      const tempPct = (s.cw || 0) + (s.ww || 0) > 0 ? (s.cw || 0) / ((s.cw || 0) + (s.ww || 0)) : 0.5;
+      const colorStyle = s.power ? `color:rgb(${s.r},${s.g},${s.b})` : 'color:#444';
+      return `<div class="device-card ${s.power?'active':''}">
+        <div class="device-header">
+          <div><div class="device-name">${s.device_name || id}</div><div class="device-id">${id}</div></div>
+          <div style="display:flex;align-items:center">
+            <div class="switch-track ${on}" onclick="togglePower('${id}')"><div class="switch-thumb"></div></div>
+            <button class="remove-btn" onclick="removeDevice('${id}')">Remove</button>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:32px;margin:8px 0;${colorStyle}">*</div>
+        <div class="device-row">
+          <div class="color-wheel-wrap" onclick="pickColor(event,'${id}')">
+            <div class="color-wheel"></div>
+            <div class="color-picker-dot" style="left:50%;top:50%"></div>
+          </div>
+        </div>
+        <div class="slider-section">
+          <div class="slider-label"><span>RGB Bright</span><span>${rgbPct}%</span></div>
+          <div class="slider-bar rgb-bri-bar" onclick="slideBri(event,'${id}','rgb')">
+            <div class="slider-thumb" style="left:${rgbPct}%"></div>
+          </div>
+        </div>
+        <div class="slider-section">
+          <div class="slider-label"><span>Temp</span><span>${tempPct<0.33?'WARM':tempPct>0.66?'COLD':'NEUTRAL'}</span></div>
+          <div class="slider-bar temp-bar" onclick="slideTemp(event,'${id}')">
+            <div class="slider-thumb" style="left:${tempPct*100}%"></div>
+          </div>
+        </div>
+        <div class="slider-section">
+          <div class="slider-label"><span>CW Bright</span><span>${cwPct}%</span></div>
+          <div class="slider-bar cw-bri-bar" onclick="slideBri(event,'${id}','cw')">
+            <div class="slider-thumb" style="left:${cwPct}%"></div>
+          </div>
+        </div>
+        <div class="effect-grid">
+          ${['breath','jump','gradient','strobe','candle','rainbow_chase','random','sunset','aurora'].map(ef => `<button class="effect-btn ${s.effect===ef?'active':''}" onclick="sendEffect('${id}','${ef}')">${ef.replace('_',' ').toUpperCase()}</button>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const glist = document.getElementById('groupList');
+  if(groups.length === 0){ glist.innerHTML = '<div class="empty-state">No groups</div>'; }
+  else {
+    glist.innerHTML = groups.map(g => `<div class="group-card">
+      <div class="group-name">${g.name}</div>
+      <div class="group-devices">${g.devices.length} devices</div>
+      <div class="group-ctrl">
+        <button class="group-btn on" onclick="ctrlGroup('${g.id}',true)">ON</button>
+        <button class="group-btn off" onclick="ctrlGroup('${g.id}',false)">OFF</button>
+        <button class="remove-btn" onclick="deleteGroup('${g.id}')" style="margin-left:auto">Delete</button>
+      </div>
+    </div>`).join('');
+  }
+}
+
+window.pickColor = function(e,id){
+  const rect = e.currentTarget.getBoundingClientRect();
+  const cx = rect.width/2, cy = rect.height/2;
+  let x = e.clientX - rect.left - cx;
+  let y = e.clientY - rect.top - cy;
+  const dist = Math.sqrt(x*x+y*y);
+  const maxR = cx-5;
+  if(dist > maxR){ x = x*maxR/dist; y = y*maxR/dist; }
+  const angle = (Math.atan2(y,x)*180/Math.PI + 450) % 360;
+  const h = angle/360, s = Math.min(dist/maxR,1);
+  const r = Math.round(hsv(h,s,1).r);
+  const g = Math.round(hsv(h,s,1).g);
+  const b = Math.round(hsv(h,s,1).b);
+  sendColor(id, r, g, b);
+};
+window.slideBri = function(e,id,type){
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left)/rect.width));
+  const val = Math.round(pct*100);
+  if(type==='rgb') sendRgbBri(id, val);
+  else sendCwBri(id, val);
+};
+window.slideTemp = function(e,id){
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left)/rect.width));
+  sendTemp(id, pct);
+};
+
+function hsv(h,s,v){
+  let r,g,b,i,f,p,q,t;
+  i = Math.floor(h*6); f = h*6-i; p = v*(1-s); q = v*(1-f*s); t = v*(1-(1-f)*s);
+  switch(i%6){case 0:r=v,g=t,b=p;break;case 1:r=q,g=v,b=p;break;case 2:r=p,g=v,b=t;break;case 3:r=p,g=q,b=v;break;case 4:r=t,g=p,b=v;break;case 5:r=v,g=p,b=q;break}
+  return {r:Math.round(r*255),g:Math.round(g*255),b:Math.round(b*255)};
+}
+
+render();
+initMQTT();
+</script>
+</body>
+</html>
