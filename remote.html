@@ -4,253 +4,329 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
 <title>RGB Light 远程控制</title>
+<meta name="theme-color" content="#0f0f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RGB Light">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#0f0f1a;color:#fff;min-height:100vh;max-width:480px;margin:0 auto;padding:0 0 40px}
-h1{font-size:19px;padding:16px 20px 4px}
-.sub{font-size:11px;color:#666;padding:0 20px 12px;font-family:monospace}
-.card{background:#1a1a2e;border-radius:16px;padding:16px;margin:12px 14px}
-.row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.row:last-child{margin-bottom:0}
-.lbl{font-size:13px;color:#aaa}
-.val{font-size:12px;color:#4a9eff;font-family:monospace;min-width:34px;text-align:right}
-input[type=text]{width:100%;padding:12px;border:none;border-radius:10px;background:#252538;color:#fff;font-size:15px;outline:none;font-family:monospace;letter-spacing:1px}
-input[type=text]::placeholder{color:#555}
-input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:6px;border-radius:3px;background:#252538;outline:none;margin:0 12px}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#4a9eff;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4)}
-input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;border-radius:50%;background:#4a9eff;cursor:pointer}
-.btn{padding:12px 18px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#fff;background:#4a9eff;transition:.2s}
-.btn:active{transform:scale(.96)}
-.btn.ghost{background:#252538}
-.btn:disabled{opacity:.4}
-/* power switch */
-.sw{width:56px;height:30px;border-radius:15px;background:#333;position:relative;cursor:pointer;transition:.3s;flex-shrink:0}
+h1{font-size:16px;padding:10px 16px 0}
+.sub{font-size:10px;color:#666;padding:0 16px 6px;font-family:monospace}
+.toprow{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:4px 16px}
+.pwrlabel{font-size:13px;color:#aaa}
+.sw{width:50px;height:27px;border-radius:14px;background:#333;position:relative;cursor:pointer;transition:.3s;flex-shrink:0}
 .sw.on{background:#4a9eff}
-.swthumb{width:26px;height:26px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,.3)}
-.sw.on .swthumb{left:28px}
-/* status dots */
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#555;margin-right:6px;vertical-align:middle}
+.swthumb{width:23px;height:23px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.sw.on .swthumb{left:25px}
+.card{background:#1a1a2e;border-radius:14px;padding:12px;margin:8px 14px}
+.row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.row:last-child{margin-bottom:0}
+.lbl{font-size:12px;color:#aaa}
+.stat{font-size:11px;color:#888}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:5px;vertical-align:middle}
 .dot.g{background:#2ecc71;box-shadow:0 0 6px #2ecc71}
 .dot.r{background:#e74c3c}
 .dot.y{background:#f1c40f}
-.stat{font-size:12px;color:#888}
-/* wheel */
-.wheelwrap{position:relative;width:min(78vw,300px);height:min(78vw,300px);margin:8px auto}
-#wheel{width:100%;height:100%;border-radius:50%;box-shadow:0 0 30px rgba(0,0,0,.5);touch-action:none;cursor:crosshair}
-.wheelc{position:absolute;top:17%;left:17%;width:66%;height:66%;border-radius:50%;background:#0f0f1a;pointer-events:none;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 20px rgba(0,0,0,.5)}
-.curcol{width:44px;height:44px;border-radius:50%;background:#000;box-shadow:0 0 14px rgba(0,0,0,.6);transition:background .15s}
-.pickdot{position:absolute;width:20px;height:20px;border-radius:50%;border:3px solid #fff;background:transparent;box-shadow:0 0 8px rgba(0,0,0,.5);pointer-events:none;transform:translate(-50%,-50%);display:none;z-index:5}
-/* quick colors */
-.quick{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding-top:6px}
-.qball{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:.15s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.qball:active{transform:scale(.9)}
-/* effects */
-.effgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
-.eff{padding:11px 4px;border:none;border-radius:10px;background:#252538;color:#ccc;font-size:13px;cursor:pointer;transition:.15s}
-.eff.on{background:#4a9eff;color:#fff;font-weight:600}
-.eff:active{transform:scale(.95)}
-.sect{font-size:13px;color:#888;margin:14px 0 8px;letter-spacing:1px}
+select{width:100%;padding:10px;border:none;border-radius:10px;background:#252538;color:#fff;font-size:14px;outline:none;font-family:monospace}
+input[type=text]{width:100%;padding:10px;border:none;border-radius:10px;background:#252538;color:#fff;font-size:14px;outline:none;font-family:monospace;letter-spacing:1px}
+input::placeholder{color:#555}
+.btn{padding:10px 16px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:#fff;background:#4a9eff;transition:.2s}
+.btn:active{transform:scale(.96)}
+.btn.ghost{background:#252538}
+.btn:disabled{opacity:.4}
+.wheelwrap{position:relative;width:min(74vw,330px);height:min(74vw,330px);margin:6px auto 0}
+#wheel{width:100%;height:100%;border-radius:50%;display:block;touch-action:none;cursor:crosshair;box-shadow:0 0 24px rgba(0,0,0,.5)}
+.pickdot{position:absolute;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.6);pointer-events:none;transform:translate(-50%,-50%);z-index:5}
+.colortxt{text-align:center;padding:6px 16px 2px}
+.cname{font-size:14px;color:#ccc;font-weight:600}
+.rgbval{font-size:11px;color:#666;font-family:monospace;margin-top:1px}
+.quick{display:flex;justify-content:center;gap:9px;padding:5px 16px 3px}
+.qball{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:.15s;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.qball.active{border-color:#fff;transform:scale(1.08)}
+.qball.r{background:#f33}.qball.g{background:#3f3}.qball.b{background:#33f}.qball.y{background:#fd3}.qball.p{background:#f3d}.qball.c{background:#3df}
+.slidsec{padding:9px 16px 5px}
+.slidlabel{display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:4px}
+.slidlabel .v{color:#fa5;font-weight:600}
+.slidbar{width:100%;height:52px;border-radius:12px;position:relative;cursor:pointer;overflow:hidden;box-shadow:inset 0 2px 6px rgba(0,0,0,.4)}
+.slidthumb{width:34px;height:34px;border-radius:50%;background:#fff;border:3px solid rgba(255,255,255,.95);position:absolute;top:9px;box-shadow:0 2px 8px rgba(0,0,0,.5);pointer-events:none;transform:translateX(-50%);transition:left .08s}
+.rgbbar{background:linear-gradient(90deg,#000 0%,#222 9%,#f00 19%,#f80 34%,#ff0 49%,#0f0 64%,#0ff 79%,#00f 90%,#f0f 100%)}
+.cwbar{background:linear-gradient(90deg,#000 0%,#444 25%,#888 50%,#ccc 75%,#fff 100%)}
+.tempbar{background:linear-gradient(90deg,#f80 0%,#fc6 25%,#fff 50%,#8bf 75%,#46a 100%)}
+.conn{display:flex;align-items:center;justify-content:space-between;margin:5px 16px;padding:5px 12px;background:#1a1a2e;border-radius:10px}
+.conndot{width:7px;height:7px;border-radius:50%;background:#00d26a;box-shadow:0 0 6px #00d26a}
+.connoff{background:#f47;box-shadow:0 0 6px #f47}
+.conntext{font-size:11px;color:#00d26a}
+.connip{font-size:11px;color:#888;font-family:monospace}
 .hidden{display:none}
-.foot{text-align:center;font-size:11px;color:#444;padding:14px}
+.instbar{position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;border-top:1px solid #252538;padding:10px 16px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:100;max-width:480px;margin:0 auto}
+.insttxt{font-size:12px;color:#ccc;line-height:1.5}
+.instbtn{padding:9px 16px;border:none;border-radius:10px;background:#4a9eff;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+body.poweroff .wheelwrap,body.poweroff .quick,body.poweroff .slidsec{opacity:.35;pointer-events:none}
 </style>
 </head>
-<body>
+<body id="appBody">
 <h1>RGB Light 远程控制</h1>
-<div class="sub" id="devsub">via MQTT · broker.emqx.io</div>
+<div class="sub" id="devsub">MQTT · 全球可控制 · 请添加到主屏幕</div>
 
 <div class="card">
   <div class="row">
-    <span class="lbl">设备 ID</span>
+    <span class="lbl">选择设备</span>
     <span class="stat"><span class="dot" id="brokerdot"></span><span id="brokertxt">未连接</span></span>
   </div>
-  <div class="row">
-    <input type="text" id="devid" placeholder="RGBL_XXXXXX" maxlength="16">
+  <div class="row" style="margin-bottom:6px">
+    <select id="devsel"><option value="">— 输入或选择设备 ID —</option></select>
   </div>
-  <div class="row" style="margin-top:12px">
-    <span class="stat" id="devtxt">设备状态未知</span>
+  <div class="row">
+    <input type="text" id="devid" placeholder="RGBL_XXXXXX" maxlength="16" style="flex:1;margin-right:10px">
     <button class="btn" id="connbtn">连接</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <span class="stat" id="devtxt">未连接设备</span>
   </div>
 </div>
 
 <div id="panel" class="hidden">
-<div class="card">
-  <div class="row">
-    <span class="lbl" style="font-size:15px;color:#ddd">电源</span>
-    <div class="sw" id="pwrsw"><div class="swthumb"></div></div>
-  </div>
+<div class="toprow">
+  <div class="pwrlabel" id="pwrlabel">POWER</div>
+  <div class="sw" id="pwrSw"><div class="swthumb"></div></div>
+</div>
+<div class="wheelwrap">
+  <canvas id="wheel" width="320" height="320"></canvas>
+  <div class="pickdot" id="pdot" style="display:none"></div>
+</div>
+<div class="colortxt"><div class="cname" id="cname">WHITE</div><div class="rgbval" id="rgbTxt">R:0 G:0 B:0</div></div>
+<div class="quick">
+  <div class="qball r" onclick="sq(255,0,0,this)"></div>
+  <div class="qball g" onclick="sq(0,255,0,this)"></div>
+  <div class="qball b" onclick="sq(0,0,255,this)"></div>
+  <div class="qball y" onclick="sq(255,255,0,this)"></div>
+  <div class="qball p" onclick="sq(255,0,255,this)"></div>
+  <div class="qball c" onclick="sq(0,255,255,this)"></div>
+</div>
+<div class="slidsec">
+  <div class="slidlabel"><span>RGB BRIGHT</span><span class="v" id="rbv">100%</span></div>
+  <div class="slidbar rgbbar" id="rbbar"><div class="slidthumb" id="rbthumb" style="left:100%"></div></div>
+</div>
+<div class="slidsec">
+  <div class="slidlabel"><span>TEMP</span><span class="v" id="tv">Neutral</span></div>
+  <div class="slidbar tempbar" id="tbar"><div class="slidthumb" id="tthumb" style="left:50%"></div></div>
+</div>
+<div class="slidsec">
+  <div class="slidlabel"><span>CW BRIGHT</span><span class="v" id="cbv">100%</span></div>
+  <div class="slidbar cwbar" id="cbbar"><div class="slidthumb" id="cbthumb" style="left:100%"></div></div>
+</div>
+<div class="conn">
+  <div style="display:flex;align-items:center;gap:6px"><div class="conndot" id="cdot"></div><div class="conntext" id="ctxt">离线</div></div>
+  <div class="connip" id="cip">--</div>
+</div>
 </div>
 
-<div class="card">
-  <div class="sect">颜色</div>
-  <div class="wheelwrap">
-    <canvas id="wheel" width="300" height="300"></canvas>
-    <div class="wheelc"><div class="curcol" id="curcol"></div></div>
-    <div class="pickdot" id="pickdot"></div>
-  </div>
-  <div class="quick" id="quick"></div>
-  <div class="sect">RGB 亮度</div>
-  <div class="row"><span class="lbl">彩光</span><input type="range" id="rgbbri" min="0" max="100" value="100"><span class="val" id="rgbbriv">100</span></div>
+<div class="instbar" id="instbar">
+  <div class="insttxt" id="insttxt">添加到主屏幕，像 App 一样使用</div>
+  <button class="instbtn" id="instbtn">安装</button>
 </div>
-
-<div class="card">
-  <div class="sect">白光（色温）</div>
-  <div class="row"><span class="lbl">冷白 CW</span><input type="range" id="cw" min="0" max="255" value="0"><span class="val" id="cwv">0</span></div>
-  <div class="row"><span class="lbl">暖白 WW</span><input type="range" id="ww" min="0" max="255" value="0"><span class="val" id="wwv">0</span></div>
-  <div class="sect">白光亮度</div>
-  <div class="row"><span class="lbl">白光</span><input type="range" id="cwbri" min="0" max="100" value="100"><span class="val" id="cwbriv">100</span></div>
-</div>
-
-<div class="card">
-  <div class="sect">特效</div>
-  <div class="effgrid" id="effgrid"></div>
-  <div class="sect">速度</div>
-  <div class="row"><span class="lbl">速度</span><input type="range" id="speed" min="1" max="100" value="50"><span class="val" id="speedv">50</span></div>
-</div>
-</div>
-
-<div class="foot">RGB Light Remote · MQTT over WSS · v5.0</div>
 
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const EFFECTS=[["breath","呼吸"],["jump","跳变"],["gradient","渐变"],["strobe","爆闪"],["candle","烛光"],["rainbow_chase","彩虹"],["random","随机"],["sunset","日落"],["aurora","极光"]];
-const QUICK=[["#ff0000",255,0,0],["#ff8000",255,128,0],["#ffff00",255,255,0],["#00ff00",0,255,0],["#00ffff",0,255,255],["#0000ff",0,0,255],["#8000ff",128,0,255],["#ff00ff",255,0,255],["#ffffff",255,255,255]];
-let client=null,devId="",connected=false;
-let S={power:false,r:255,g:0,b:0,cw:0,ww:0,rgb_brightness:100,cw_brightness:100};
-let curEffect="";
-/* ---------- helpers ---------- */
-function hsv2rgb(h,s,v){h=((h%360)+360)%360;const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let r,g,b;
- if(h<60){r=c;g=x;b=0}else if(h<120){r=x;g=c;b=0}else if(h<180){r=0;g=c;b=x}
- else if(h<240){r=0;g=x;b=c}else if(h<300){r=x;g=0;b=c}else{r=c;g=0;b=x}
- return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)]}
-function rgb2hsv(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;
- if(d){if(mx===r)h=60*(((g-b)/d)%6);else if(mx===g)h=60*((b-r)/d+2);else h=60*((r-g)/d+4)}
- if(h<0)h+=360;return [h,mx?d/mx:0,mx]}
-function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+const QUICK=[[255,0,0],[0,255,0],[0,0,255],[255,255,0],[255,0,255],[0,255,255]];
+let client=null,devId="",connected=false,online=false;
+let S={power:false,r:255,g:255,b:255,cw:0,ww:0,rgb_brightness:100,cw_brightness:100};
+const savedDevs={};
+
+/* ---------- PWA install ---------- */
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  $('instbar').classList.remove('hidden');
+  $('insttxt').textContent='安装到主屏幕，像 App 一样控制';
+});
+$('instbtn').onclick=async()=>{
+  if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('instbar').classList.add('hidden')}
+  else if(isIOS()){
+    $('insttxt').innerHTML='iOS 请点浏览器底部<b>分享</b>按钮 → <b>添加到主屏幕</b>';
+  }
+};
+function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
+function inStandalone(){return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}
+if(!inStandalone()){
+  if(isIOS()&&!deferredPrompt){$('instbar').classList.remove('hidden');$('insttxt').textContent='iOS: 点分享按钮 → 添加到主屏幕'}
+}else{$('instbar').classList.add('hidden')}
+
 /* ---------- MQTT ---------- */
-function setBroker(st,txt){const d=$("brokerdot");d.className="dot "+st;$("brokertxt").textContent=txt}
+function setBroker(st,txt){const d=$('brokerdot');d.className='dot '+st;$('brokertxt').textContent=txt}
+function devTopic(sfx){return 'rgblight/'+devId+'/'+sfx}
 function connect(){
-  devId=$("devid").value.trim();
-  if(!devId){$("devid").focus();return}
-  localStorage.setItem("rgblight_devid",devId);
+  const id=$('devid').value.trim().toUpperCase();
+  if(!id){$('devid').focus();return}
+  devId=id;
+  localStorage.setItem('rgblight_devid',devId);
   if(client){try{client.end(true)}catch(e){}client=null}
-  setBroker("y","连接中…");
-  $("connbtn").disabled=true;
-  const cid="rgblight-web-"+Math.random().toString(16).slice(2,10);
-  client=mqtt.connect("wss://broker.emqx.io:8084/mqtt",{clientId:cid,keepalive:30,connectTimeout:8000,reconnectPeriod:4000,clean:true});
-  client.on("connect",()=>{
-    connected=true;setBroker("g","已连接");$("connbtn").disabled=false;$("connbtn").textContent="重新连接";
-    client.subscribe("rgblight/"+devId+"/state",{qos:0});
-    $("panel").classList.remove("hidden");
-    $("devsub").textContent=devId+" · via MQTT · broker.emqx.io";
-    $("devtxt").textContent="已订阅设备状态主题";
+  setBroker('y','连接中…');$('connbtn').disabled=true;
+  client=mqtt.connect('wss://broker.emqx.io:8084/mqtt',{clientId:'rgblight-web-'+Math.random().toString(16).slice(2,10),keepalive:30,connectTimeout:8000,reconnectPeriod:4000,clean:true});
+  client.on('connect',()=>{
+    connected=true;setBroker('g','已连接');$('connbtn').disabled=false;$('connbtn').textContent='重新连接';
+    client.subscribe('rgblight/devices/#',{qos:0});
+    client.subscribe(devTopic('state'),{qos:0});
+    $('panel').classList.remove('hidden');
+    $('devsub').textContent=devId+' · MQTT · 全球可控制';
+    $('devtxt').textContent='已订阅设备状态';
   });
-  client.on("message",(t,payload)=>{
-    if(t!=="rgblight/"+devId+"/state")return;
-    try{const st=JSON.parse(payload.toString());applyState(st)}catch(e){}
+  client.on('message',(t,p)=>{
+    const topic=t.toString();
+    if(topic==='rgblight/devices/'+devId){
+      try{const d=JSON.parse(p.toString());if(d.ip)$('cip').textContent=d.ip}catch(e){}
+    }
+    else if(topic.startsWith('rgblight/devices/')&&topic!==devTopic('state')){
+      const did=topic.split('/').pop();
+      if(did&&did!==devId&&!savedDevs[did]){
+        savedDevs[did]=true;
+        const opt=document.createElement('option');opt.value=did;opt.textContent=did;
+        $('devsel').appendChild(opt);
+      }
+    }
+    else if(topic===devTopic('state')){
+      try{applyState(JSON.parse(p.toString()))}catch(e){}
+    }
   });
-  client.on("close",()=>{connected=false;setBroker("r","已断开")});
-  client.on("error",e=>{setBroker("r","连接错误");$("connbtn").disabled=false});
-  client.on("reconnect",()=>setBroker("y","重连中…"));
+  client.on('close',()=>{connected=false;online=false;setBroker('r','已断开');$('devtxt').textContent='连接断开'});
+  client.on('error',()=>{setBroker('r','连接错误');$('connbtn').disabled=false});
+  client.on('reconnect',()=>setBroker('y','重连中…'));
 }
-function pub(obj){
-  if(!client||!connected)return;
-  client.publish("rgblight/"+devId+"/ctrl",JSON.stringify(obj),{qos:0});
-}
+function pub(obj){if(!client||!connected)return;client.publish(devTopic('ctrl'),JSON.stringify(obj),{qos:0})}
+function setDev(id){$('devid').value=id;connect()}
+$('devsel').onchange=e=>{if(e.target.value)setDev(e.target.value)};
+
 /* ---------- state sync ---------- */
 function applyState(st){
   Object.assign(S,st);
-  $("pwrsw").classList.toggle("on",!!S.power);
+  online=true;
+  $('pwrSw').classList.toggle('on',!!S.power);
+  $('pwrlabel').textContent=S.power?'POWER':'OFF';
+  document.body.classList.toggle('poweroff',!S.power);
   if(!dragging){
-    $("curcol").style.background="rgb("+S.r+","+S.g+","+S.b+")";
-    $("cw").value=S.cw;$("cwv").textContent=S.cw;
-    $("ww").value=S.ww;$("wwv").textContent=S.ww;
+    $('cname').textContent=cn(S.r,S.g,S.b);
+    $('rgbTxt').textContent='R:'+S.r+' G:'+S.g+' B:'+S.b;
+    $('cw').value=S.cw;$('cwv')&&0;
     placePick();
   }
-  $("rgbbri").value=S.rgb_brightness;$("rgbbriv").textContent=S.rgb_brightness;
-  $("cwbri").value=S.cw_brightness;$("cwbriv").textContent=S.cw_brightness;
-  $("devtxt").textContent="设备在线 · "+new Date().toLocaleTimeString();
+  $('rbv').textContent=S.rgb_brightness+'%';
+  $('cbv').textContent=S.cw_brightness+'%';
+  us('rb',S.rgb_brightness/100);us('cb',S.cw_brightness/100);
+  if(S.cw+S.ww>0){ut(S.cw/(S.cw+S.ww))}else{ut(0.5)}
+  $('ctxt').textContent=online?'在线':'离线';
+  $('devtxt').textContent='设备在线 · '+new Date().toLocaleTimeString();
 }
-/* ---------- wheel ---------- */
-const wheel=$("wheel"),ctx=wheel.getContext("2d"),W=300,R=W/2;
-(function drawWheel(){
+
+/* ---------- wheel (solid pie) ---------- */
+const wheel=$('wheel'),ctx=wheel.getContext('2d'),W=320,R=160;
+(function lsw(){
   const img=ctx.createImageData(W,W);
   for(let y=0;y<W;y++)for(let x=0;x<W;x++){
     const dx=x-R,dy=y-R,d=Math.sqrt(dx*dx+dy*dy),i=(y*W+x)*4;
     if(d>R){img.data[i+3]=0;continue}
-    const ang=Math.atan2(dy,dx)*180/Math.PI,sat=d/R;
-    const[r,g,b]=hsv2rgb(ang,sat,1);
-    img.data[i]=r;img.data[i+1]=g;img.data[i+2]=b;img.data[i+3]=255;
+    const ang=((Math.atan2(dy,dx)*180/Math.PI)+360)%360,sat=d/R;
+    const c=hsv(ang/360,sat,1);
+    img.data[i]=c.r;img.data[i+1]=c.g;img.data[i+2]=c.b;img.data[i+3]=255;
   }
   ctx.putImageData(img,0,0);
 })();
 let dragging=false;
-function pickAt(ev){
-  const rect=wheel.getBoundingClientRect();
-  const px=(ev.clientX-rect.left)*(W/rect.width),py=(ev.clientY-rect.top)*(W/rect.height);
-  const dx=px-R,dy=py-R;let d=Math.sqrt(dx*dx+dy*dy);if(d>R)return;
-  const ang=(Math.atan2(dy,dx)*180/Math.PI+360)%360,sat=Math.min(1,d/R);
-  const[r,g,b]=hsv2rgb(ang,sat,1);
-  S.r=r;S.g=g;S.b=b;S.cw=0;S.ww=0;
-  $("curcol").style.background="rgb("+r+","+g+","+b+")";
-  $("cw").value=0;$("cwv").textContent=0;$("ww").value=0;$("wwv").textContent=0;
-  const pd=$("pickdot");pd.style.display="block";
-  pd.style.left=(ev.clientX-rect.left)+"px";pd.style.top=(ev.clientY-rect.top)+"px";
-  pubColor();
+function pc(e){
+  const rect=wheel.getBoundingClientRect(),sc=W/rect.width;
+  const px=(e.clientX-rect.left)*sc,py=(e.clientY-rect.top)*sc;
+  const dx=px-R,dy=py-R,d=Math.sqrt(dx*dx+dy*dy);
+  if(d>R-2)return;
+  const ang=((Math.atan2(dy,dx)*180/Math.PI)+360)%360,sat=d/R;
+  if(sat<0.06){S.r=255;S.g=255;S.b=255}else{const c=hsv(ang/360,sat,1);S.r=c.r;S.g=c.g;S.b=c.b}
+  S.cw=0;S.ww=0;
+  document.querySelectorAll('.qball').forEach(b=>b.classList.remove('active'));
+  up();ui();pub({action:'color',r:S.r,g:S.g,b:S.b,cw:0,ww:0});
 }
-const pubColor=debounce(()=>{
-  stopEffectUI();
-  pub({action:"color",r:S.r,g:S.g,b:S.b,cw:S.cw,ww:S.ww});
-},150);
-function placePick(){
-  if(S.r===0&&S.g===0&&S.b===0){$("pickdot").style.display="none";return}
-  const[h,s]=rgb2hsv(S.r,S.g,S.b),rad=h*Math.PI/180,d=s*R;
-  const rect=wheel.getBoundingClientRect(),sc=rect.width/W;
-  const pd=$("pickdot");pd.style.display="block";
-  pd.style.left=(R+Math.cos(rad)*d)*sc+"px";pd.style.top=(R+Math.sin(rad)*d)*sc+"px";
+function up(){
+  const pd=$('pdot');
+  if(S.r===255&&S.g===255&&S.b===255){pd.style.left='50%';pd.style.top='50%'}
+  else{
+    const r=S.r/255,g=S.g/255,b=S.b/255,max=Math.max(r,g,b),min=Math.min(r,g,b);
+    let h=0;if(max!==min){if(max===r)h=(g-b)/(max-min);else if(max===g)h=2+(b-r)/(max-min);else h=4+(r-g)/(max-min)}
+    h=(h*60+360)%360;const s=max===0?0:1-min/max,rad=h*Math.PI/180,dist=s*50;
+    pd.style.left=(50+Math.cos(rad)*dist)+'%';pd.style.top=(50+Math.sin(rad)*dist)+'%';
+  }
+  pd.style.background='rgb('+S.r+','+S.g+','+S.b+')';pd.style.display='block';
 }
-wheel.addEventListener("pointerdown",e=>{dragging=true;wheel.setPointerCapture(e.pointerId);pickAt(e)});
-wheel.addEventListener("pointermove",e=>{if(dragging)pickAt(e)});
-wheel.addEventListener("pointerup",()=>dragging=false);
-/* ---------- quick colors ---------- */
-QUICK.forEach(([hex,r,g,b])=>{
-  const d=document.createElement("div");d.className="qball";d.style.background=hex;
-  d.onclick=()=>{S.r=r;S.g=g;S.b=b;S.cw=0;S.ww=0;
-    $("curcol").style.background=hex;$("cw").value=0;$("cwv").textContent=0;$("ww").value=0;$("wwv").textContent=0;
-    placePick();stopEffectUI();pub({action:"color",r,g,b,cw:0,ww:0})};
-  $("quick").appendChild(d);
+wheel.addEventListener('pointerdown',e=>{dragging=true;try{wheel.setPointerCapture(e.pointerId)}catch(x){}pc(e)});
+wheel.addEventListener('pointermove',e=>{if(dragging)pc(e)});
+wheel.addEventListener('pointerup',()=>dragging=false);
+wheel.addEventListener('pointercancel',()=>dragging=false);
+
+/* ---------- quick ---------- */
+QUICK.forEach((c,i)=>{
+  const el=document.querySelectorAll('.qball')[i];
+  el.onclick=()=>{if(!S.power)return;S.r=c[0];S.g=c[1];S.b=c[2];S.cw=0;S.ww=0;
+    document.querySelectorAll('.qball').forEach(b=>b.classList.remove('active'));el.classList.add('active');
+    up();ui();pub({action:'color',r:c[0],g:c[1],b:c[2],cw:0,ww:0})};
 });
+
 /* ---------- sliders ---------- */
-$("pwrsw").onclick=()=>{S.power=!S.power;$("pwrsw").classList.toggle("on",S.power);pub({action:"power",value:S.power})};
-$("rgbbri").oninput=e=>{$("rgbbriv").textContent=e.target.value};
-$("rgbbri").onchange=debounce(e=>pub({action:"rgb_brightness",value:+e.target.value}),150);
-$("cwbri").oninput=e=>{$("cwbriv").textContent=e.target.value};
-$("cwbri").onchange=debounce(e=>pub({action:"cw_brightness",value:+e.target.value}),150);
-const pubWhite=debounce(()=>{
-  stopEffectUI();
-  pub({action:"color",r:S.r,g:S.g,b:S.b,cw:S.cw,ww:S.ww});
-},150);
-$("cw").oninput=e=>{S.cw=+e.target.value;$("cwv").textContent=S.cw;pubWhite()};
-$("ww").oninput=e=>{S.ww=+e.target.value;$("wwv").textContent=S.ww;pubWhite()};
-/* ---------- effects ---------- */
-EFFECTS.forEach(([name,label])=>{
-  const b=document.createElement("button");b.className="eff";b.textContent=label;b.dataset.e=name;
-  b.onclick=()=>{
-    if(curEffect===name){stopEffectUI();pub({action:"effect",effect:""});return}
-    setEffectUI(name);
-    pub({action:"effect",effect:name,speed:+$("speed").value});
-  };
-  $("effgrid").appendChild(b);
+$('pwrSw').onclick=()=>{S.power=!S.power;$('pwrSw').classList.toggle('on',S.power);$('pwrlabel').textContent=S.power?'POWER':'OFF';document.body.classList.toggle('poweroff',!S.power);pub({action:'power',value:S.power})};
+function hs(tp,e){
+  const bar=$({rb:'rbbar',t:'tbar',cb:'cbbar'}[tp]);
+  const rect=bar.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,((e.clientX||e.pageX)-rect.left)/rect.width));
+  if(tp==='rb'){S.rgb_brightness=Math.round(pct*100);us('rb',pct)}
+  else if(tp==='cb'){S.cw_brightness=Math.round(pct*100);us('cb',pct)}
+  else if(tp==='t'){S.cw=Math.round(pct*255);S.ww=Math.round((1-pct)*255);ut(pct)}
+}
+function sb(tp){
+  if(tp==='rb')pub({action:'rgb_brightness',value:S.rgb_brightness});
+  else if(tp==='cb')pub({action:'cw_brightness',value:S.cw_brightness});
+  else if(tp==='t')pub({action:'color',r:S.r,g:S.g,b:S.b,cw:S.cw,ww:S.ww});
+}
+['rbbar','tbar','cbbar'].forEach(id=>{
+  const el=$(id),tp=id.replace('bar','');
+  el.addEventListener('click',e=>{hs(tp,e);sb(tp)});
+  el.addEventListener('touchstart',e=>{e.preventDefault();hs(tp,e.touches[0])},{passive:false});
+  el.addEventListener('touchmove',e=>{e.preventDefault();hs(tp,e.touches[0])},{passive:false});
+  el.addEventListener('touchend',()=>sb(tp),{passive:false});
 });
-function setEffectUI(name){curEffect=name;document.querySelectorAll(".eff").forEach(b=>b.classList.toggle("on",b.dataset.e===name))}
-function stopEffectUI(){setEffectUI("")}
-$("speed").oninput=e=>{$("speedv").textContent=e.target.value};
-$("speed").onchange=debounce(e=>{if(curEffect)pub({action:"effect",effect:curEffect,speed:+e.target.value})},200);
+function us(tp,pct){const el=$({rb:'rbthumb',cb:'cbthumb'}[tp]);if(el)el.style.left=(pct*100)+'%'}
+function ut(pct){const el=$('tthumb');el.style.left=(pct*100)+'%';const v=$('tv');
+  if(pct<.33)v.textContent='WARM';else if(pct>.66)v.textContent='COLD';else v.textContent='NEUTRAL';v.style.color=pct<.5?'#fa5':'#8bf'}
+function ui(){ui2()}
+function ui2(){
+  $('cname').textContent=cn(S.r,S.g,S.b);
+  $('rgbTxt').textContent='R:'+S.r+' G:'+S.g+' B:'+S.b;
+  us('rb',S.rgb_brightness/100);us('cb',S.cw_brightness/100);
+  if(S.cw+S.ww>0){ut(S.cw/(S.cw+S.ww))}else{ut(0.5)}
+}
+function cn(r,g,b){
+  if(r>200&&g<80&&b<80)return'RED';if(r<80&&g>200&&b<80)return'GREEN';if(r<80&&g<80&&b>200)return'BLUE';
+  if(r>200&&g>200&&b<80)return'YELLOW';if(r>200&&g<80&&b>200)return'PURPLE';if(r<80&&g>200&&b>200)return'CYAN';
+  if(r>200&&g>100&&b<80)return'ORANGE';if(r>180&&g>180&&b>180)return'WHITE';if(r<60&&g<60&&b<60)return'BLACK';
+  return'COLOR';
+}
+function hsv(h,s,v){
+  let r,g,b;const i=Math.floor(h*6),f=h*6-i,p=v*(1-s),q=v*(1-f*s),t=v*(1-(1-f)*s);
+  switch(i%6){case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;
+    case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;case 5:r=v;g=p;b=q;break}
+  return{r:Math.round(r*255),g:Math.round(g*255),b:Math.round(b*255)};
+}
+
 /* ---------- init ---------- */
-$("connbtn").onclick=connect;
-$("devid").value=localStorage.getItem("rgblight_devid")||"";
-$("devid").addEventListener("keydown",e=>{if(e.key==="Enter")connect()});
+$('connbtn').onclick=connect;
+$('devid').addEventListener('keydown',e=>{if(e.key==='Enter')connect()});
+const q=new URLSearchParams(location.search);
+const urlDev=(q.get('dev')||'').toUpperCase();
+const saved=localStorage.getItem('rgblight_devid')||'';
+$('devid').value=urlDev||saved||'';
+if(navigator.serviceWorker){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+if(urlDev){connect()}else if(saved){connect()}
 </script>
 </body>
 </html>
