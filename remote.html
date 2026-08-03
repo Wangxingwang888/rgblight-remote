@@ -213,8 +213,7 @@ function applyState(st){
   if(!dragging){
     $('cname').textContent=cn(S.r,S.g,S.b);
     $('rgbTxt').textContent='R:'+S.r+' G:'+S.g+' B:'+S.b;
-    $('cw').value=S.cw;$('cwv')&&0;
-    placePick();
+    up();
   }
   $('rbv').textContent=S.rgb_brightness+'%';
   $('cbv').textContent=S.cw_brightness+'%';
